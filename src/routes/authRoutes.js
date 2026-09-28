@@ -6,20 +6,51 @@ const {
 } = require("../controllers/authController");
 
 const validate = require("../middleware/validate")
+const rateLimit = require("../middleware/rateLimit");
 
 const { registerSchema, loginSchema , forgotPassowrdSchema , verifyOtpSchema , resetPasswordSchema } = require("../validators/authvalidators");
 
 const router = express.Router();
 
-router.post("/register",  validate(registerSchema),registerUser);
+const registerRateLimit = rateLimit({
+    capacity : 5,
+    refillRate : 5/60,
+    keyPrefix: "register"
+})
 
-router.post("/login", validate(loginSchema), loginUser);
+const loginRateLimit = rateLimit({
+    capacity : 5,
+    refillRate : 5/60,
+    keyPrefix: "login"
+})
 
-router.post("/forgot-password" , validate(forgotPassowrdSchema) , forgotPassword);
+const forgotPasswordRateLimit = rateLimit({
+    capacity: 3,
+    refillRate: 3 / 600,
+    keyPrefix: "forgot-password"
+});
 
-router.post("/verify-otp" , validate(verifyOtpSchema) , verifyOtp)
+const verifyOtpRateLimit = rateLimit({
+    capacity: 10,
+    refillRate: 10 / 300,
+    keyPrefix: "verify-otp"
+});
 
-router.post("/reset-password" , validate(resetPasswordSchema) , resetPassword)
+const resetPasswordRateLimit = rateLimit({
+    capacity: 5,
+    refillRate: 5 / 300,
+    keyPrefix: "reset-password"
+});
+
+router.post("/register",  registerRateLimit ,validate(registerSchema),registerUser);
+
+router.post("/login",loginRateLimit, validate(loginSchema), loginUser);
+
+router.post("/forgot-password" , forgotPasswordRateLimit, validate(forgotPassowrdSchema) , forgotPassword);
+
+router.post("/verify-otp" ,verifyOtpRateLimit, validate(verifyOtpSchema) , verifyOtp)
+
+router.post("/reset-password" ,resetPasswordRateLimit, validate(resetPasswordSchema) , resetPassword)
 
 
 module.exports = router;

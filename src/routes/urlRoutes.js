@@ -3,10 +3,18 @@ const express = require("express");
 const {createShortUrl , getAnalytics , redirectUrl , getUrls , deleteUrl} = require("../controllers/urlController")
 
 const protect = require("../middleware/authMiddleware");
+const rateLimit = require("../middleware/rateLimit");
 
 const router = express.Router();
 
-router.post("/" ,protect ,  createShortUrl);
+const createUrlRateLimit = rateLimit({
+    capacity: 20,
+    refillRate: 20 / 60,
+    keyPrefix: "create-url",
+    getIdentifier: (req) => req.user.id
+});
+
+router.post("/" ,createUrlRateLimit ,protect ,  createShortUrl);
 
 router.get("/analytics/:shortId",protect, getAnalytics);
 
