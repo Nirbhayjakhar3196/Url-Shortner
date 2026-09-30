@@ -17,31 +17,36 @@ const router = express.Router();
 const registerRateLimit = rateLimit({
     capacity : 5,
     refillRate : 5/60,
-    keyPrefix: "register"
+    keyPrefix: "register",
+    getIdentifier: (req) => req.body?.email?.toLowerCase().trim() || req.ip
 })
 
 const loginRateLimit = rateLimit({
     capacity : 5,
     refillRate : 5/60,
-    keyPrefix: "login"
+    keyPrefix: "login",
+    getIdentifier: (req) => req.body?.email?.toLowerCase().trim() || req.ip
 })
 
 const forgotPasswordRateLimit = rateLimit({
     capacity: 3,
     refillRate: 3 / 600,
-    keyPrefix: "forgot-password"
+    keyPrefix: "forgot-password",
+    getIdentifier: (req) => req.body?.email?.toLowerCase().trim() || req.ip
 });
 
 const verifyOtpRateLimit = rateLimit({
     capacity: 10,
     refillRate: 10 / 300,
-    keyPrefix: "verify-otp"
+    keyPrefix: "verify-otp",
+    getIdentifier: (req) => req.body?.email?.toLowerCase().trim() || req.ip
 });
 
 const resetPasswordRateLimit = rateLimit({
     capacity: 5,
     refillRate: 5 / 300,
-    keyPrefix: "reset-password"
+    keyPrefix: "reset-password",
+    getIdentifier: (req) => req.body?.email?.toLowerCase().trim() || req.ip
 });
 
 router.post("/register",  registerRateLimit ,validate(registerSchema),registerUser);
