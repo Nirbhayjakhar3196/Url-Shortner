@@ -37,14 +37,31 @@ class ApiClient {
       }
 
       if (!response.ok) {
+        // Read Retry-After header for 429 Rate Limit responses
+        const retryAfterHeader = response.headers.get('Retry-After') || response.headers.get('retry-after');
+        let retryAfterSeconds = null;
+        if (retryAfterHeader) {
+          const parsed = parseInt(retryAfterHeader, 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            retryAfterSeconds = parsed;
+          }
+        }
+
         if (response.status === 401) {
           // Token expired or invalid
           removeToken();
           window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         }
-        const error = new Error(data.message || `Request failed with status ${response.status}`);
+
+        let errorMessage = data.message;
+        if (response.status === 429 && retryAfterSeconds) {
+          errorMessage = `Too many requests. Please try again in ${retryAfterSeconds} seconds.`;
+        }
+
+        const error = new Error(errorMessage || `Request failed with status ${response.status}`);
         error.status = response.status;
         error.data = data;
+        error.retryAfter = retryAfterSeconds;
         throw error;
       }
 
@@ -76,6 +93,38 @@ class ApiClient {
     return this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    });
+  }
+
+  async exchangeGoogleCode(code) {
+    return this.request('/auth/google/exchange', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  }
+
+  getGoogleAuthUrl() {
+    return `${this.baseUrl}/auth/google`;
+  }
+
+  async forgotPassword({ email }) {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async verifyOtp({ email, otp }) {
+    return this.request('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+  }
+
+  async resetPassword({ resetToken, newPassword }) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ resetToken, newPassword }),
     });
   }
 

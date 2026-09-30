@@ -8,6 +8,8 @@ const {
 const validate = require("../middleware/validate")
 const rateLimit = require("../middleware/rateLimit");
 
+const {googleLogin , googleCallback , exchangeGoogleCode} = require("../controllers/googleAuthController")
+
 const { registerSchema, loginSchema , forgotPassowrdSchema , verifyOtpSchema , resetPasswordSchema } = require("../validators/authvalidators");
 
 const router = express.Router();
@@ -52,5 +54,11 @@ router.post("/verify-otp" ,verifyOtpRateLimit, validate(verifyOtpSchema) , verif
 
 router.post("/reset-password" ,resetPasswordRateLimit, validate(resetPasswordSchema) , resetPassword)
 
+
+router.get("/google",googleLogin)
+
+router.get("/google/callback" , googleCallback)
+
+router.post("/google/exchange" , exchangeGoogleCode)
 
 module.exports = router;
