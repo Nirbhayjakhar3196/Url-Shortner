@@ -7,11 +7,17 @@ const User = require("../models/User")
 
 const {redisClient} = require("../config/redis")
 
-const googleClient = new OAuth2Client(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-)
+const getGoogleClient = () => {
+    return new OAuth2Client(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+    );
+};
+
+const getFrontendUrl = () => {
+    return (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+};
 
 const GOOGLE_SCOPES = [
     "openid",
@@ -43,6 +49,7 @@ const googleLogin = async(req, res) => {
             }
         )
 
+        const googleClient = getGoogleClient();
         const authorizationUrl = googleClient.generateAuthUrl({
             access_type : "online",
             scope:GOOGLE_SCOPES,
@@ -64,18 +71,18 @@ const googleLogin = async(req, res) => {
 const googleCallback = async(req , res) => {
 
     try {
-        
+        const frontendUrl = getFrontendUrl();
         const {code  , state , error} = req.query;
 
         if(error){
             return res.redirect(
-                `${process.env.FRONTEND_URL}/login?error=google_login_failed`
+                `${frontendUrl}/login?error=google_login_failed`
             );
         }
 
         if (!code || !state) {
             return res.redirect(
-                `${process.env.FRONTEND_URL}/login?error=invalid_google_response`
+                `${frontendUrl}/login?error=invalid_google_response`
             );
         }
 
@@ -83,19 +90,20 @@ const googleCallback = async(req , res) => {
 
         const storedState = await redisClient.getDel(
             `oauth:state:${stateHash}`
-        )
+        );
 
         if (!storedState) {
             return res.redirect(
-                `${process.env.FRONTEND_URL}/login?error=invalid_state`
+                `${frontendUrl}/login?error=invalid_state`
             );
         }
 
+        const googleClient = getGoogleClient();
         const { tokens } = await googleClient.getToken(code);
 
         if (!tokens.id_token) {
             return res.redirect(
-                `${process.env.FRONTEND_URL}/login?error=missing_google_identity`
+                `${frontendUrl}/login?error=missing_google_identity`
             );
         }
 
@@ -110,7 +118,7 @@ const googleCallback = async(req , res) => {
 
         if (!email || !email_verified || !sub) {
             return res.redirect(
-                `${process.env.FRONTEND_URL}/login?error=invalid_google_account`
+                `${frontendUrl}/login?error=invalid_google_account`
             );
         }
 
@@ -152,14 +160,14 @@ const googleCallback = async(req , res) => {
         );
 
         res.redirect(
-            `${process.env.FRONTEND_URL}/oauth/callback?code=${handoffCode}`
+            `${frontendUrl}/oauth/callback?code=${handoffCode}`
         );
 
     } catch (error) {
         console.log("Google callback error:", error);
 
         return res.redirect(
-            `${process.env.FRONTEND_URL}/login?error=google_login_failed`
+            `${getFrontendUrl()}/login?error=google_login_failed`
         );
     }
 }
