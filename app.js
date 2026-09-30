@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet")
 
 const authRoutes = require("./src/routes/authRoutes");
 const urlRoutes = require("./src/routes/urlRoutes");
@@ -7,6 +8,8 @@ const urlRoutes = require("./src/routes/urlRoutes");
 const {redirectUrl, getAnalytics} = require("./src/controllers/urlController")
 
 const app = express();
+
+app.use(helmet());
 
 app.use(cors());
 app.use(express.json());
