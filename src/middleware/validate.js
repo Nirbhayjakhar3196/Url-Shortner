@@ -5,8 +5,10 @@ const validate = (schema) => {
         const result = schema.safeParse(req.body ?? {});
 
         if (!result.success) {
+            const errorMessage = result.error.issues[0]?.message || "Invalid request body";
             return res.status(400).json({
-                error: result.error.issues[0]?.message || "Invalid request body"
+                message: errorMessage,
+                error: errorMessage
             });
         }
 

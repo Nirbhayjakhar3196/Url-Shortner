@@ -11,15 +11,15 @@ const createUrlRateLimit = rateLimit({
     capacity: 20,
     refillRate: 20 / 60,
     keyPrefix: "create-url",
-    getIdentifier: (req) => req.user.id
+    getIdentifier: (req) => req.user?.id || req.ip
 });
 
-router.post("/" ,createUrlRateLimit ,protect ,  createShortUrl);
+router.post("/", protect, createUrlRateLimit, createShortUrl);
 
-router.get("/analytics/:shortId",protect, getAnalytics);
+router.get("/analytics/:shortId", protect, getAnalytics);
 
 
-router.get("/my", protect , getUrls);
+router.get("/my", protect, getUrls);
 
 router.delete("/:shortId", protect, deleteUrl);
 
