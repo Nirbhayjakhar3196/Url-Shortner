@@ -23,7 +23,8 @@ const registerUser = async (req, res) => {
             });
         }
 
-        const existingUser = await User.findOne({ email });
+        const normalizedEmail = email.toLowerCase().trim();
+        const existingUser = await User.findOne({ email: normalizedEmail });
 
         if (existingUser) {
             return res.status(400).json({
@@ -34,8 +35,8 @@ const registerUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const user = await User.create({
-            name,
-            email,
+            name: name.trim(),
+            email: normalizedEmail,
             password: hashedPassword
         });
 
@@ -71,7 +72,8 @@ const loginUser = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ email });
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail });
 
         if (!user) {
             return res.status(400).json({
@@ -125,7 +127,8 @@ const forgotPassword = async (req, res) => {
         const genericMessage =
             "If an account exists with this email, a password reset OTP has been sent.";
 
-        const user = await User.findOne({ email });
+        const normalizedEmail = (email || "").toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail });
 
         if (!user) {
             return res.status(200).json({
@@ -210,7 +213,8 @@ const verifyOtp = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ email });
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail });
 
         if (!user) {
             return res.status(400).json({
