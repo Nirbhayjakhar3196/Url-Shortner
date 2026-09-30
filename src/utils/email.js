@@ -1,20 +1,36 @@
 
 const nodemailer = require("nodemailer");
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: true,
+const smtpPass = (process.env.SMTP_PASSWORD || "").replace(/\s+/g, "").trim();
+const smtpUser = (process.env.SMTP_USER || "").trim();
+const smtpHost = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
+const smtpPort = Number(process.env.SMTP_PORT) || 465;
 
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD
-    },
+const isGmail = smtpHost.includes("gmail") || smtpUser.includes("gmail.com") || smtpUser.includes("@kalvium");
 
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
-});
+const transporter = isGmail
+    ? nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: smtpUser,
+            pass: smtpPass
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
+    })
+    : nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+            user: smtpUser,
+            pass: smtpPass
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
+    });
 
 const verifyEmailConnection = async () => {
     await transporter.verify();
