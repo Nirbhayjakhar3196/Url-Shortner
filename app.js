@@ -16,7 +16,13 @@ app.use(express.json());
 
 app.get("/health", (req, res) => {
     res.json({
-        message: "ok"
+        status: "ok",
+        version: "v3-resilient-smtp",
+        smtpUserConfigured: Boolean(process.env.SMTP_USER),
+        smtpUser: process.env.SMTP_USER || null,
+        smtpPassLength: process.env.SMTP_PASSWORD ? process.env.SMTP_PASSWORD.replace(/\s+/g, "").length : 0,
+        mongoConfigured: Boolean(process.env.MONGO_URI),
+        redisConfigured: Boolean(process.env.REDIS_URL)
     });
 });
 
