@@ -1,16 +1,24 @@
 const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const port = Number(process.env.SMTP_PORT) || 587;
+    const user = (process.env.SMTP_USER || '').trim();
+    const pass = (process.env.SMTP_PASSWORD || '').replace(/\s+/g, '');
+    const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+    const port = Number(process.env.SMTP_PORT) || 465;
 
-    if (host.includes('gmail')) {
+    // Use Gmail direct SSL on port 465 for reliability on cloud hosts (Render/Vercel)
+    if (host.includes('gmail') || port === 465) {
         return nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
             auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASSWORD
-            }
+                user,
+                pass
+            },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000
         });
     }
 
@@ -19,12 +27,15 @@ const createTransporter = () => {
         port: port,
         secure: port === 465,
         auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASSWORD
+            user,
+            pass
         },
         tls: {
             rejectUnauthorized: false
-        }
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
     });
 };
 

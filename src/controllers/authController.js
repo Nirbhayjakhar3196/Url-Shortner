@@ -188,8 +188,17 @@ const forgotPassword = async (req, res) => {
             }
         );
 
-        // Send actual OTP to user's email
-        await sendOtpEmail(user.email, otp);
+        // Send actual OTP to user's email with error handling and cleanup
+        try {
+            await sendOtpEmail(user.email, otp);
+        } catch (emailError) {
+            console.error("Failed to send OTP email:", emailError);
+            await redisClient.del(otpKey);
+            await redisClient.del(coolDownKey);
+            return res.status(500).json({
+                message: "Unable to send verification email. Please try again in a few moments."
+            });
+        }
 
         return res.status(200).json({
             message: genericMessage
