@@ -146,7 +146,7 @@ describe("2. Auth Endpoints & Validation", () => {
             email: "testuser@example.com"
         });
         expect(res.status).toBe(200);
-        expect(res.body.message).toContain("password reset OTP");
+        expect(res.body.message).toContain("OTP has been sent");
     });
 });
 

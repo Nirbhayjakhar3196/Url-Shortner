@@ -1,21 +1,23 @@
-const crypto = require('crypto')
+const crypto = require("crypto");
 
 const generateOtp = () => {
-
     return crypto.randomInt(100000, 1000000).toString();
-
-}
+};
 
 const hashValue = (value) => {
-
-    const clean = String(value ?? '').trim();
-
     return crypto
         .createHash("sha256")
-        .update(clean)
-        .digest("hex")
-}
+        .update(String(value))
+        .digest("hex");
+};
+
+const generateResetToken = () => {
+    return crypto.randomBytes(32).toString("hex");
+};
 
 module.exports = {
-    generateOtp, hashValue
-}
+    generateOtp,
+    hashValue,
+    generateResetToken
+};
+
