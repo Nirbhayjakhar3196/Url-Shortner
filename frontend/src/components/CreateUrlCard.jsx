@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { PlusCircle, Link2, Type, ArrowRight, Check, Copy, ExternalLink, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { PlusCircle, Link2, Type, ArrowRight, Check, Copy, ExternalLink, Loader2, Sparkles, AlertCircle, Clock } from 'lucide-react';
 import api from '../lib/api';
+import { useRateLimit } from '../lib/useRateLimit';
 
 export default function CreateUrlCard({ onUrlCreated, onCopySuccess }) {
   const [title, setTitle] = useState('');
@@ -9,6 +10,7 @@ export default function CreateUrlCard({ onUrlCreated, onCopySuccess }) {
   const [error, setError] = useState(null);
   const [createdResult, setCreatedResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const { cooldown, handleRateLimit, isRateLimited } = useRateLimit();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,7 +48,16 @@ export default function CreateUrlCard({ onUrlCreated, onCopySuccess }) {
       setOriginalUrl('');
       if (onUrlCreated) onUrlCreated(result);
     } catch (err) {
-      setError(err.message || 'Unable to create short URL. Please check the URL and try again.');
+      if (err.status === 429) {
+        handleRateLimit(err);
+        setError(
+          err.retryAfter
+            ? `Too many requests. Please try again in ${err.retryAfter} seconds.`
+            : (err.message || 'Too many requests. Please try again later.')
+        );
+      } else {
+        setError(err.message || 'Unable to create short URL. Please check the URL and try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -89,7 +100,7 @@ export default function CreateUrlCard({ onUrlCreated, onCopySuccess }) {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. My Portfolio"
                 required
-                disabled={loading}
+                disabled={loading || isRateLimited}
                 className="w-full bg-[#faf8f4] border border-[#ded8cb] rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-medium text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-amber-600 focus:bg-white focus:ring-2 focus:ring-amber-500/10 transition-all disabled:opacity-50"
               />
             </div>
@@ -108,20 +119,25 @@ export default function CreateUrlCard({ onUrlCreated, onCopySuccess }) {
                 onChange={(e) => setOriginalUrl(e.target.value)}
                 placeholder="https://example.com/very-long-url-path"
                 required
-                disabled={loading}
+                disabled={loading || isRateLimited}
                 className="w-full bg-[#faf8f4] border border-[#ded8cb] rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-medium text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-amber-600 focus:bg-white focus:ring-2 focus:ring-amber-500/10 transition-all disabled:opacity-50"
               />
             </div>
           </div>
         </div>
 
-        {/* Error message */}
-        {error && (
+        {/* Rate Limit Alert */}
+        {isRateLimited ? (
+          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-700 shrink-0 animate-pulse" />
+            <span className="font-semibold">Too many requests. Please try again in {cooldown} seconds.</span>
+          </div>
+        ) : error ? (
           <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>{error}</span>
           </div>
-        )}
+        ) : null}
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
           <span className="text-[11px] text-zinc-500 font-medium">
@@ -130,13 +146,18 @@ export default function CreateUrlCard({ onUrlCreated, onCopySuccess }) {
 
           <button
             type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#1e2024] hover:bg-[#2d3036] text-amber-300 rounded-xl text-xs font-bold shadow-md shadow-black/10 transition-all disabled:opacity-50 cursor-pointer hover:scale-[1.01]"
+            disabled={loading || isRateLimited}
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#1e2024] hover:bg-[#2d3036] text-amber-300 rounded-xl text-xs font-bold shadow-md shadow-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:scale-[1.01]"
           >
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
                 <span>Generating...</span>
+              </>
+            ) : isRateLimited ? (
+              <>
+                <Clock className="w-4 h-4 text-amber-300" />
+                <span>Retry in {cooldown}s</span>
               </>
             ) : (
               <>

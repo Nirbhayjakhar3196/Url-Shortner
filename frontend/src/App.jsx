@@ -5,16 +5,61 @@ import Toast from './components/Toast';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import VerifyOtpPage from './pages/VerifyOtpPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import DashboardPage from './pages/DashboardPage';
 import HistoryPage from './pages/HistoryPage';
 import { getCurrentUser, isAuthenticated, removeToken } from './lib/auth';
 import { Menu, Link2 } from 'lucide-react';
 
+const pageToPath = {
+  landing: '/',
+  login: '/login',
+  register: '/register',
+  'forgot-password': '/forgot-password',
+  'verify-otp': '/verify-otp',
+  'reset-password': '/reset-password',
+  dashboard: '/dashboard',
+  history: '/history',
+  'oauth-callback': '/oauth/callback',
+};
+
+const getInitialPage = () => {
+  const path = window.location.pathname;
+  if (path === '/oauth/callback' || path === '/oauth/callback/') {
+    const params = new URLSearchParams(window.location.search);
+    const hasCode = params.get('code') || params.get('error');
+    if (hasCode) {
+      return 'oauth-callback';
+    }
+    // If no code and already authenticated, stay on dashboard
+    if (isAuthenticated()) {
+      return 'dashboard';
+    }
+    return 'login';
+  }
+  if (path === '/login') return isAuthenticated() ? 'dashboard' : 'login';
+  if (path === '/register') return isAuthenticated() ? 'dashboard' : 'register';
+  if (path === '/forgot-password') return 'forgot-password';
+  if (path === '/verify-otp') return 'verify-otp';
+  if (path === '/reset-password') return 'reset-password';
+  if (path === '/dashboard' || path === '/history') {
+    return isAuthenticated() ? path.replace('/', '') : 'login';
+  }
+  return isAuthenticated() ? 'dashboard' : 'landing';
+};
+
 export default function App() {
-  const [activePage, setActivePage] = useState('landing');
+  const [activePage, setActivePage] = useState(getInitialPage);
   const [isAuth, setIsAuth] = useState(isAuthenticated());
   const [toast, setToast] = useState({ message: null, type: 'info' });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // In-memory state for password reset flow (not stored permanently)
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -26,44 +71,78 @@ export default function App() {
   useEffect(() => {
     const authStatus = isAuthenticated();
     setIsAuth(authStatus);
-    if (authStatus) {
-      setActivePage('dashboard');
-    } else {
-      setActivePage('landing');
+
+    const path = window.location.pathname;
+    if (path === '/oauth/callback' || path === '/oauth/callback/') {
+      const params = new URLSearchParams(window.location.search);
+      const hasCode = params.get('code') || params.get('error');
+      if (hasCode) {
+        setActivePage('oauth-callback');
+      } else if (authStatus) {
+        setActivePage('dashboard');
+        window.history.replaceState({}, '', '/dashboard');
+      } else {
+        setActivePage('login');
+        window.history.replaceState({}, '', '/login');
+      }
+    } else if (authStatus) {
+      if (activePage === 'landing' || activePage === 'login' || activePage === 'register') {
+        setActivePage('dashboard');
+        window.history.replaceState({}, '', '/dashboard');
+      }
     }
+
+    const handlePopState = () => {
+      setActivePage(getInitialPage());
+      setIsAuth(isAuthenticated());
+    };
 
     const handleUnauthorized = () => {
       removeToken();
       setIsAuth(false);
       setActivePage('login');
+      window.history.replaceState({}, '', '/login');
       showToast('Session expired. Please sign in again.', 'error');
     };
 
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('auth:unauthorized', handleUnauthorized);
-    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
   }, []);
 
-  const handleNavigate = (page) => {
+  const handleNavigate = (page, replace = false) => {
     if ((page === 'dashboard' || page === 'history') && !isAuthenticated()) {
       showToast('Please sign in to access your dashboard.', 'info');
       setActivePage('login');
+      window.history.replaceState({}, '', '/login');
       return;
     }
     setActivePage(page);
+    const targetPath = pageToPath[page] || '/';
+    if (window.location.pathname !== targetPath) {
+      if (replace) {
+        window.history.replaceState({}, '', targetPath);
+      } else {
+        window.history.pushState({}, '', targetPath);
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleLoginSuccess = () => {
     setIsAuth(true);
     showToast('Welcome back! Signed in successfully.', 'success');
-    setActivePage('dashboard');
+    handleNavigate('dashboard', true);
   };
 
   const handleLogout = () => {
     removeToken();
     setIsAuth(false);
     showToast('Logged out successfully.', 'info');
-    setActivePage('landing');
+    handleNavigate('landing', true);
   };
 
   const isDashboardView = isAuth && (activePage === 'dashboard' || activePage === 'history');
@@ -151,6 +230,46 @@ export default function App() {
             )}
             {activePage === 'register' && (
               <RegisterPage onNavigate={handleNavigate} />
+            )}
+            {activePage === 'forgot-password' && (
+              <ForgotPasswordPage
+                initialEmail={resetEmail}
+                onNavigate={handleNavigate}
+                onEmailSubmitted={(email) => {
+                  setResetEmail(email);
+                  handleNavigate('verify-otp');
+                }}
+              />
+            )}
+            {activePage === 'verify-otp' && (
+              <VerifyOtpPage
+                email={resetEmail}
+                onNavigate={handleNavigate}
+                onOtpVerified={(token) => {
+                  setResetToken(token);
+                  handleNavigate('reset-password');
+                }}
+              />
+            )}
+            {activePage === 'reset-password' && (
+              <ResetPasswordPage
+                email={resetEmail}
+                resetToken={resetToken}
+                onNavigate={handleNavigate}
+                onPasswordResetSuccess={() => {
+                  setResetEmail('');
+                  setResetToken('');
+                  showToast('Password reset successfully! Please sign in with your new password.', 'success');
+                  handleNavigate('login');
+                }}
+              />
+            )}
+            {activePage === 'oauth-callback' && (
+              <OAuthCallbackPage
+                onNavigate={handleNavigate}
+                onLoginSuccess={handleLoginSuccess}
+                showToast={showToast}
+              />
             )}
           </main>
 

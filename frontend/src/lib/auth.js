@@ -52,7 +52,7 @@ export const getCurrentUser = () => {
     return null;
   }
   return {
-    id: decoded.id,
+    id: decoded.id || decoded.userId,
     name: decoded.name || 'User',
     email: decoded.email || '',
   };
