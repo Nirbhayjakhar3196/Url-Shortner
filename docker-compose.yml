@@ -1,0 +1,41 @@
+services:
+
+  backend:
+    build: .
+    container_name: url-shortener-api
+
+    ports:
+      - "8080:3000"
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+
+      MONGO_URI: mongodb://mongo:27017/url_shortener
+      REDIS_URL: redis://redis:6379
+
+      JWT_SECRET: ${JWT_SECRET}
+      BASE_URL: http://localhost:3000
+      FRONTEND_URL: ${FRONTEND_URL}
+
+    depends_on:
+      - mongo
+      - redis
+
+  mongo:
+    image: mongo:7
+    container_name: url-shortener-mongo
+
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: url-shortener-redis
+
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mongo_data:
+  redis_data:

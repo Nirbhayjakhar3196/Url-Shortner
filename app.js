@@ -14,6 +14,12 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
+app.get("/health", (req, res) => {
+    res.json({
+        message: "ok"
+    });
+});
+
 app.get("/", (req, res) => {
     res.json({
         message: "URL Shortener API is running"
