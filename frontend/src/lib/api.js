@@ -53,7 +53,7 @@ class ApiClient {
           window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         }
 
-        let errorMessage = data.message;
+        let errorMessage = data.message || data.error;
         if (response.status === 429 && retryAfterSeconds) {
           errorMessage = `Too many requests. Please try again in ${retryAfterSeconds} seconds.`;
         }
