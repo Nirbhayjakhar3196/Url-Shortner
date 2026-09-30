@@ -158,10 +158,13 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError(null);
+                }}
                 placeholder="nirbhay@example.com"
                 required
-                disabled={loading || isRateLimited}
+                disabled={loading}
                 className="w-full bg-[#faf8f4] border border-[#ded8cb] rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-amber-600 focus:bg-white focus:ring-2 focus:ring-amber-500/10 transition-all disabled:opacity-50"
               />
             </div>

@@ -8,9 +8,11 @@ const generateOtp = () => {
 
 const hashValue = (value) => {
 
+    const clean = String(value ?? '').trim();
+
     return crypto
         .createHash("sha256")
-        .update(value)
+        .update(clean)
         .digest("hex")
 }
 

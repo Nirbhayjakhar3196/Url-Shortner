@@ -128,7 +128,12 @@ const forgotPassword = async (req, res) => {
             "If an account exists with this email, a password reset OTP has been sent.";
 
         const normalizedEmail = (email || "").toLowerCase().trim();
-        const user = await User.findOne({ email: normalizedEmail });
+        const user = await User.findOne({
+            $or: [
+                { email: normalizedEmail },
+                { email: { $regex: new RegExp("^" + normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i") } }
+            ]
+        });
 
         if (!user) {
             return res.status(200).json({
@@ -213,8 +218,15 @@ const verifyOtp = async (req, res) => {
             });
         }
 
-        const normalizedEmail = email.toLowerCase().trim();
-        const user = await User.findOne({ email: normalizedEmail });
+        const normalizedEmail = (email || "").toLowerCase().trim();
+        const cleanOtp = String(otp || "").trim().replace(/\s+/g, "");
+
+        const user = await User.findOne({
+            $or: [
+                { email: normalizedEmail },
+                { email: { $regex: new RegExp("^" + normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i") } }
+            ]
+        });
 
         if (!user) {
             return res.status(400).json({
